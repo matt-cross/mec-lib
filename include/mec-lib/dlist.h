@@ -77,7 +77,7 @@ static inline void dlist_insert_back(struct dlist *head, struct dlist *new)
 
 static inline struct dlist *dlist_pop_front(struct dlist *head)
 {
-        if (dlist_empty(head)) {
+        if (is_dlist_empty(head)) {
                 return NULL;
         } else {
                 struct dlist *d = head->next;
@@ -89,7 +89,7 @@ static inline struct dlist *dlist_pop_front(struct dlist *head)
 
 static inline struct dlist *dlist_pop_back(struct dlist *head)
 {
-        if (dlist_empty(head)) {
+        if (is_dlist_empty(head)) {
                 return NULL;
         } else {
                 struct dlist *d = head->prev;

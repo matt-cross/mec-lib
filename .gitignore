@@ -1,2 +1,4 @@
 *~
 *.o
+*.d
+test/test-dlist
