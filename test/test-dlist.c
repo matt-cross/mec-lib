@@ -61,7 +61,8 @@ int main(void)
 {
         struct dlist head;
         struct thing *thing_array;
-        struct thing *thingp;
+        struct thing *thingp, *next_thingp;
+        struct dlist *dl, *next_dl;
         unsigned num_things = 1000;
         unsigned i;
 
@@ -70,6 +71,7 @@ int main(void)
 
         dlist_init(&head);
 
+        printf("Adding %u items to dlist with dlist_insert_front...\n", num_things);
         for (i = num_things; i>0; i--) {
                 thingp = &thing_array[i-1];
 
@@ -80,17 +82,85 @@ int main(void)
                 TEST(is_dlist_valid(&head));
         }
 
+        printf("Walking dlist with dlist_for_each_item...\n");
         i = 0;
         dlist_for_each_item(&head, thingp, struct thing, dl) {
                 TEST(thingp->a == i+1);
                 i = thingp->a;
         }
 
+        printf("Walking dlist with dlist_for_each_safe (and deleting every other item)...\n");
+        i = 0;
+        dlist_for_each_safe(&head, dl, next_dl) {
+                thingp = DLIST_ITEM(dl, struct thing, dl);
+
+                TEST(thingp->a == i+1);
+                i = thingp->a;
+
+                if ((thingp->a % 2) == 0) {
+                        dlist_del(&thingp->dl);
+                        TEST(is_dlist_valid(&head));
+                }
+        }
+
+        printf("Removing remaining items with dlist_pop_back...\n");
+        i = 0;
         while (!is_dlist_empty(&head)) {
+                i++;
+
+                /* TRICKY!  Note that this (quite unintentionally) tests that the first argument to DLIST_ITEM is
+                   evaluated only once. */
                 thingp = DLIST_ITEM(dlist_pop_back(&head), struct thing, dl);
 
                 TEST(is_dlist_valid(&head));
         }
+        printf("  (Popped %u items)\n", i);
+        TEST(i == (num_things / 2));
+
+
+
+        printf("Adding %u items to dlist with dlist_insert_back...\n", num_things);
+        for (i = 0; i<num_things; i++) {
+                thingp = &thing_array[i];
+
+                thingp->a = i+1;
+                snprintf(thingp->name, sizeof(thingp->name), "thing %u", i+1);
+
+                dlist_insert_back(&head, &thingp->dl);
+                TEST(is_dlist_valid(&head));
+        }
+
+        printf("Walking list with dlist_for_each...\n");
+        i = 0;
+        dlist_for_each(&head, dl) {
+                thingp = DLIST_ITEM(dl, struct thing, dl);
+
+                TEST(thingp->a == i+1);
+                i = thingp->a;
+        }
+
+        printf("Walking dlist with dlist_for_each_item_safe (and deleting every other item)...\n");
+        i = 0;
+        dlist_for_each_item_safe(&head, thingp, next_thingp, struct thing, dl) {
+                TEST(thingp->a == i+1);
+                i = thingp->a;
+
+                if ((thingp->a % 2) == 0)
+                        dlist_del(&thingp->dl);
+        }
+
+        printf("Deleting remaining items from list with dlist_pop_front\n");
+        i = 0;
+        while (!is_dlist_empty(&head)) {
+                i++;
+
+                thingp = DLIST_ITEM(dlist_pop_front(&head), struct thing, dl);
+
+                TEST(is_dlist_valid(&head));
+        }
+        printf("  (Popped %u items)\n", i);
+        TEST(i == (num_things / 2));
+
 
         return 0;
 }
