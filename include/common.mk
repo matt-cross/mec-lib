@@ -13,12 +13,12 @@ ALL_DEPS = $(patsubst %.o,%.d,$(ALL_OBJS))
 
 define BUILD_PROGRAM
 $(1): $($(1)-OBJS)
-	$(CC) $(CFLAGS) -o $$@ $$^
+	$(CC) $(CFLAGS) $($(1)-LDFLAGS) -o $$@ $$^
 endef
 
-$(foreach program,$(PROGRAMS),$(eval $(call BUILD_PROGRAM,$(program))))
-
 all: $(PROGRAMS)
+
+$(foreach program,$(PROGRAMS),$(eval $(call BUILD_PROGRAM,$(program))))
 
 clean:
 	-rm $(PROGRAMS) $(ALL_OBJS) $(ALL_DEPS)

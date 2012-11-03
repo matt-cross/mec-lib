@@ -30,7 +30,15 @@ struct dlist {
 };
 
 /* Extract pointer to an item that contains dlist linkage. */
-#define DLIST_ITEM(d,type,field)    ((d) ? (type *) ((char *)(d) - offsetof(type, field)) : (type *)NULL)
+#define DLIST_ITEM(d,type,field)                                                \
+        ({                                                                      \
+                typeof(d) _dl = (d);                                            \
+                                                                                \
+                (_dl) ?                                                         \
+                        (type *) ((char *)_dl - offsetof(type, field))          \
+                        :                                                       \
+                        (type *)NULL;                                           \
+        })
 
 /* Initialize the head of a dlist. */
 static inline void dlist_init(struct dlist *head)
