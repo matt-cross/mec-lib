@@ -33,58 +33,47 @@
                 }                                                               \
         } while (0)
 
-int is_bst_subtree_valid(struct bst *bst, struct bst_node *n)
+void assert_bst_subtree_valid(struct bst *bst, struct bst_node *n)
 {
         void *my_key = bst->ops->get_key(n);
 
         /* Check levels - left link must not be horizontal; right link may be horizontal or vertical. */
-        if ((n->left->level + 1) != n->level)
-                return 0;
-        if (((n->right->level + 1) != n->level) &&
-            (n->right->level != n->level) )
-                return 0;
+        TEST ((n->left->level + 1) == n->level);
+        TEST (((n->right->level + 1) == n->level) ||
+              ((n->right->level == n->level) &&
+               ((n->right->right->level + 1) == n->level) ) );
 
         if (n->left != bst_nil) {
                 void *l_key = bst->ops->get_key(n->left);
 
-                if (bst->ops->compare(l_key, my_key) >= 0)
-                        return 0;
-                if (n->left->parent != n)
-                        return 0;
-                if (!is_bst_subtree_valid(bst, n->left))
-                        return 0;
+                TEST (bst->ops->compare(l_key, my_key) < 0);
+                TEST (n->left->parent == n);
+                assert_bst_subtree_valid(bst, n->left);
         }
 
         if (n->right != bst_nil) {
                 void *r_key = bst->ops->get_key(n->right);
 
-                if (bst->ops->compare(my_key, r_key) >= 0)
-                        return 0;
-                if (n->right->parent != n)
-                        return 0;
-                if (!is_bst_subtree_valid(bst, n->right))
-                        return 0;
+                TEST (bst->ops->compare(my_key, r_key) < 0);
+                TEST (n->right->parent == n);
+                assert_bst_subtree_valid(bst, n->right);
         }
-
-        return 1;
 }
 
-int is_bst_valid(struct bst *bst)
+void assert_bst_valid(struct bst *bst)
 {
         if (bst->root != bst_nil) {
-                if (bst->root->parent != NULL)
-                        return 0;
+                TEST(bst->root->parent == NULL);
 
-                return is_bst_subtree_valid(bst, bst->root);
+                assert_bst_subtree_valid(bst, bst->root);
         }
-
-        return 1;
 }
 
 struct thing {
         int a;
         char name[40];
         struct bst_node bstn;
+        struct bst_node name_bstn;
 };
 
 void *thing_get_int_key(struct bst_node *n)
@@ -111,7 +100,7 @@ struct bst_ops thing_int_bst_ops = {
 
 void *thing_get_string_key(struct bst_node *n)
 {
-        struct thing *thing = BST_ITEM(n, struct thing, bstn);
+        struct thing *thing = BST_ITEM(n, struct thing, name_bstn);
 
         return &thing->name;
 }
@@ -126,19 +115,45 @@ struct bst_ops thing_string_bst_ops = {
         .compare = compare_strings,
 };
 
+struct bst_node *bruteforce_find_smallest_gte(struct bst *bst, void *key)
+{
+        struct bst_node *n;
+
+        for (n = bst_next(bst, NULL);
+             n && (bst->ops->compare(key, bst->ops->get_key(n)) > 0);
+             n = bst_next(bst, n) )
+                continue;
+
+        return n;
+}
+
+struct bst_node *bruteforce_find_largest_lte(struct bst *bst, void *key)
+{
+        struct bst_node *n;
+
+        for (n = bst_prev(bst, NULL);
+             n && (bst->ops->compare(key, bst->ops->get_key(n)) < 0);
+             n = bst_prev(bst, n) )
+                continue;
+
+        return n;
+}
+
 int main(void)
 {
-        struct bst tree;
+        struct bst tree, name_tree;
         struct thing *thing_array;
         struct thing *thingp, *last_thingp;
-        struct bst_node *n;
-        unsigned num_things = 1000;
+        struct bst_node *n, *next_n;
+        unsigned num_things = 10000;
         unsigned i;
+        int key;
 
         thing_array = malloc(sizeof(struct thing) * num_things);
         TEST(thing_array);
 
         bst_init(&tree, &thing_int_bst_ops);
+        bst_init(&name_tree, &thing_string_bst_ops);
 
         printf("Adding %u random items to bst...\n", num_things);
         for (i = num_things; i>0; i--) {
@@ -147,15 +162,38 @@ int main(void)
                 thingp->a = (int)random();
                 snprintf(thingp->name, sizeof(thingp->name), "thing %u", i);
 
-                bst_insert(&tree, &thingp->bstn);
-                TEST(is_bst_valid(&tree));
+                TEST(bst_insert(&tree, &thingp->bstn) == 0);
+                assert_bst_valid(&tree);
+
+                TEST(bst_insert(&name_tree, &thingp->name_bstn) == 0);
+                assert_bst_valid(&name_tree);
         }
 
-        printf("Walking dlist with dlist_for_each_safe (and deleting every other item)...\n");
+        printf("Checking bst_find() for every item in tree...\n");
+        for (i=0; i<num_things; i++) {
+                TEST(bst_find(&tree, &thing_array[i].a) == &thing_array[i].bstn);
+                TEST(bst_find(&name_tree, &thing_array[i].name) == &thing_array[i].name_bstn);
+        }
+
+        printf("Checking bst_find_smallest_gte() and bst_find_largest_lte() with %u random items\n", num_things/10);
+        for (i=0; i<num_things/10; i++) {
+                char name_key[40];
+                key = (int)random();
+
+                TEST(bst_find_smallest_gte(&tree, &key) == bruteforce_find_smallest_gte(&tree, &key));
+                TEST(bst_find_largest_lte(&tree, &key) == bruteforce_find_largest_lte(&tree, &key));
+
+                sprintf(name_key, "thing %d", key % num_things);
+
+                TEST(bst_find_smallest_gte(&name_tree, &name_key) == bruteforce_find_smallest_gte(&name_tree, &name_key));
+                TEST(bst_find_largest_lte(&name_tree, &name_key) == bruteforce_find_largest_lte(&name_tree, &name_key));
+        }
+
+        printf("Walking bst with bst_next (and deleting every other item)...\n");
         last_thingp = NULL;
-        for (i=0, n = bst_next(&tree, NULL);
+        for (i=0, n = bst_next(&tree, NULL), next_n = bst_next(&tree, n);
              n;
-             i++, n = bst_next(&tree, n)) {
+             i++, n = next_n, next_n = bst_next(&tree, n)) {
                 thingp = BST_ITEM(n, struct thing, bstn);
 
                 if (last_thingp)
@@ -163,26 +201,54 @@ int main(void)
                 last_thingp = thingp;
 
                 if ((i % 2) == 0) {
-                        bst_del(&tree, &thingp->bstn);
-                        TEST(is_bst_valid(&tree));
+                        TEST(bst_delete(&tree, &thingp->bstn) == 0);
+                        assert_bst_valid(&tree);
                 }
         }
 
-        printf("Removing remaining items with bst_del...\n");
+        printf("Removing remaining items with bst_delete...\n");
         i = 0;
         while (tree.root != bst_nil) {
                 i++;
 
                 thingp = BST_ITEM(tree.root, struct thing, bstn);
-                bst_del(&tree, &thingp->bstn);
+                TEST(bst_delete(&tree, &thingp->bstn) == 0);
 
-                TEST(is_bst_valid(&tree));
+                assert_bst_valid(&tree);
         }
         printf("  (Popped %u items)\n", i);
         TEST(i == (num_things / 2));
 
 
-        /* TBD: test with strings. */
+        printf("Walking name bst with bst_next (and deleting every other item)...\n");
+        last_thingp = NULL;
+        for (i=0, n = bst_next(&name_tree, NULL), next_n = bst_next(&name_tree, n);
+             n;
+             i++, n = next_n, next_n = bst_next(&name_tree, n)) {
+                thingp = BST_ITEM(n, struct thing, name_bstn);
+
+                if (last_thingp)
+                        TEST(strcmp(thingp->name, last_thingp->name) > 0);
+                last_thingp = thingp;
+
+                if ((i % 2) == 0) {
+                        TEST(bst_delete(&name_tree, &thingp->name_bstn) == 0);
+                        assert_bst_valid(&name_tree);
+                }
+        }
+
+        printf("Removing remaining items from name tree with bst_delete...\n");
+        i = 0;
+        while (name_tree.root != bst_nil) {
+                i++;
+
+                thingp = BST_ITEM(name_tree.root, struct thing, name_bstn);
+                TEST(bst_delete(&name_tree, &thingp->name_bstn) == 0);
+
+                assert_bst_valid(&name_tree);
+        }
+        printf("  (Popped %u items)\n", i);
+        TEST(i == (num_things / 2));
 
 
         return 0;
