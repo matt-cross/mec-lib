@@ -119,7 +119,7 @@ int bst_insert(struct bst *bst, struct bst_node *n)
         if (bst->root == bst_nil) {
                 n->parent = NULL;
                 bst->root = n;
-                return;
+                return 0;
         }
 
         /* Find the proper place in the tree to insert this node as a leaf. */

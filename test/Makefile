@@ -4,7 +4,7 @@ vpath %.c $(TOP)/src
 
 PROGRAMS = test-dlist test-bst
 
-CFLAGS += -g -I $(TOP)/include
+CFLAGS += -g -I $(TOP)/include -Wall -Werror
 
 test-dlist-OBJS = test-dlist.o
 test-bst-OBJS = test-bst.o bst.o
