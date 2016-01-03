@@ -1,5 +1,7 @@
 *~
 *.o
 *.d
+*.dSYM
 test/test-dlist
 test/test-bst
+test/test-crc
