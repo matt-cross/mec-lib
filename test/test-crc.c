@@ -17,6 +17,7 @@
 
 /* test-crc.c - Unit tests for generic CRC. */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,11 +146,11 @@ int main(void)
         char *test = "123456789";
 
         for (unsigned i=0; i<num_test_cfgs; i++) {
-                printf("Checking %-20s: expected check value 0x%.*llx...", test_cfgs[i].name, hex_digits(test_cfgs[i].cfg.width), test_cfgs[i].check);
+                printf("Checking %-20s: expected check value 0x%.*"PRIx64"...", test_cfgs[i].name, hex_digits(test_cfgs[i].cfg.width), test_cfgs[i].check);
 
                 uint64_t crc = crc_calculate(&test_cfgs[i].cfg, (uint8_t *) test, strlen(test));
 
-                printf(" got 0x%.*llx\n", hex_digits(test_cfgs[i].cfg.width), crc);
+                printf(" got 0x%.*"PRIx64"\n", hex_digits(test_cfgs[i].cfg.width), crc);
 
                 TEST(crc == test_cfgs[i].check);
         }

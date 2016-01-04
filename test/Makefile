@@ -4,7 +4,7 @@ vpath %.c $(TOP)/src
 
 PROGRAMS = test-dlist test-bst test-crc
 
-CFLAGS += -g -I $(TOP)/include -Wall -Werror
+CFLAGS += -g -I $(TOP)/include -std=gnu99 -Wall -Werror
 
 test-dlist-OBJS = test-dlist.o
 test-bst-OBJS = test-bst.o bst.o
