@@ -35,6 +35,9 @@ static uint64_t reflect(uint64_t value, uint8_t bits)
 
 uint64_t crc_init(struct crc_config *cfg, uint8_t *data, uint64_t len)
 {
+        // We only support up to 64 bits
+        assert(cfg->width <= 64);
+        
         return crc_cont(cfg, cfg->init, data, len);
 }
 

@@ -26,7 +26,7 @@
 
 struct crc_config
 {
-        uint8_t width; /* Max: 64, must be a multiple of 8. */
+        uint8_t width; /* Max: 64. */
         uint64_t poly;
         uint64_t init;
         uint8_t refin;
